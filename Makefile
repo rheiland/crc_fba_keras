@@ -1,12 +1,7 @@
 VERSION := $(shell grep . VERSION.txt | cut -f1 -d:)
-PROGRAM_NAME := biorobots
+PROGRAM_NAME := u01_keras
 
 CC := g++
-# CC := g++-mp-7 # typical macports compiler name
-# CC := g++-7 # typical homebrew compiler name 
-
-# Check for environment definitions of compiler 
-# e.g., on CC = g++-7 on OSX
 ifdef PHYSICELL_CPP 
 	CC := $(PHYSICELL_CPP)
 endif
@@ -30,7 +25,7 @@ ARCH := native # best auto-tuning
 # ARCH := nocona #64-bit pentium 4 or later 
 
 # CFLAGS := -march=$(ARCH) -Ofast -s -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
-CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
+CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++17
 
 ifeq ($(OS),Windows_NT)
 else
@@ -39,7 +34,7 @@ else
 		UNAME_P := $(shell uname -p)
 		var := $(shell which $(CC) | xargs file)
 		ifeq ($(lastword $(var)),arm64)
-		  CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11
+		  CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++17
 		endif
 	endif
 endif
@@ -56,17 +51,56 @@ PhysiCell_module_OBJECTS := PhysiCell_SVG.o PhysiCell_pathology.o PhysiCell_Mult
 
 # put your custom objects here (they should be in the custom_modules directory)
 
-PhysiCell_custom_module_OBJECTS := biorobots.o
+PhysiCell_custom_module_OBJECTS := custom.o
 
 pugixml_OBJECTS := pugixml.o
 
-PhysiCell_OBJECTS := $(BioFVM_OBJECTS)  $(pugixml_OBJECTS) $(PhysiCell_core_OBJECTS) $(PhysiCell_module_OBJECTS)
-ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS)
+Keras_OBJECTS := baseLayer.o model.o tensor.o utils.o activation.o conv2d.o embedding.o	locally2d.o batchNormalization.o dense.o flatten.o lstm.o conv1d.o elu.o locally1d.o maxPooling2d.o
+
+PhysiCell_OBJECTS := $(BioFVM_OBJECTS)  $(pugixml_OBJECTS) $(PhysiCell_core_OBJECTS) $(PhysiCell_module_OBJECTS) 
+
+ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS) $(Keras_OBJECTS)
 
 #compile the project 
 	
 all: main.cpp $(ALL_OBJECTS)
 	$(COMPILE_COMMAND) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp 
+
+# Keras components
+Keras_DIR := ./addons/keras/src
+baseLayer.o: $(Keras_DIR)/baseLayer.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/baseLayer.cc
+model.o: $(Keras_DIR)/model.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/model.cc
+tensor.o: $(Keras_DIR)/tensor.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/tensor.cc
+utils.o: $(Keras_DIR)/utils.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/utils.cc
+
+activation.o: $(Keras_DIR)/layers/activation.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/activation.cc
+conv2d.o: $(Keras_DIR)/layers/conv2d.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/conv2d.cc
+embedding.o: $(Keras_DIR)/layers/embedding.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/embedding.cc
+locally2d.o: $(Keras_DIR)/layers/locally2d.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/locally2d.cc
+batchNormalization.o: $(Keras_DIR)/layers/batchNormalization.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/batchNormalization.cc
+dense.o: $(Keras_DIR)/layers/dense.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/dense.cc
+flatten.o: $(Keras_DIR)/layers/flatten.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/flatten.cc
+lstm.o: $(Keras_DIR)/layers/lstm.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/lstm.cc
+conv1d.o: $(Keras_DIR)/layers/conv1d.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/conv1d.cc
+elu.o: $(Keras_DIR)/layers/elu.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/elu.cc
+locally1d.o: $(Keras_DIR)/layers/locally1d.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/locally1d.cc
+maxPooling2d.o: $(Keras_DIR)/layers/maxPooling2d.cc
+	$(COMPILE_COMMAND) -c $(Keras_DIR)/layers/maxPooling2d.cc
 
 # PhysiCell core components	
 
@@ -154,8 +188,13 @@ PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
 	
 # user-defined PhysiCell modules
 
-biorobots.o: ./custom_modules/biorobots.cpp 
-	$(COMPILE_COMMAND) -c ./custom_modules/biorobots.cpp
+custom.o: ./custom_modules/custom.cpp 
+	$(COMPILE_COMMAND) -c ./custom_modules/custom.cpp
+
+# keras-related
+
+custom.o: ./custom_modules/custom.cpp 
+	$(COMPILE_COMMAND) -c ./custom_modules/custom.cpp
 
 # cleanup
 
